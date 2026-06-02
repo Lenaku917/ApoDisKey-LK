@@ -76,6 +76,7 @@ struct DisKeyApp: App {
             CommandGroup(replacing: .windowArrangement) { }
             CommandGroup(after: .windowArrangement) {
                 Toggle("Always on Top", isOn: $alwaysOnTop)
+                    .keyboardShortcut("p", modifiers: [.command, .option])
             }
 #if os(macOS)
             CommandGroup(replacing: .help) {
