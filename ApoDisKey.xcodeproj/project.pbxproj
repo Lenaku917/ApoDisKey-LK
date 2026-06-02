@@ -8,8 +8,6 @@
 
 /* Begin PBXBuildFile section */
 		862D71062E666F19001E0EAA /* ApoDisKey.icon in Resources */ = {isa = PBXBuildFile; fileRef = 862D71052E666F19001E0EAA /* ApoDisKey.icon */; };
-		862F89E72EA024DB00AD6F66 /* ApolloNetwork in Frameworks */ = {isa = PBXBuildFile; productRef = 862F89E62EA024DB00AD6F66 /* ApolloNetwork */; };
-		862F8A2B2EA029E700AD6F66 /* ApolloNetwork in Frameworks */ = {isa = PBXBuildFile; productRef = 862F8A2A2EA029E700AD6F66 /* ApolloNetwork */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -67,7 +65,6 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				862F89E72EA024DB00AD6F66 /* ApolloNetwork in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -75,7 +72,6 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				862F8A2B2EA029E700AD6F66 /* ApolloNetwork in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -130,7 +126,6 @@
 			);
 			name = ApoDisKey;
 			packageProductDependencies = (
-				862F89E62EA024DB00AD6F66 /* ApolloNetwork */,
 			);
 			productName = DSKY;
 			productReference = 867EBD642C3A1E29004C4DDD /* ApoDisKey.app */;
@@ -183,7 +178,6 @@
 			);
 			mainGroup = 867EBD5B2C3A1E29004C4DDD;
 			packageReferences = (
-				862F89E52EA024DB00AD6F66 /* XCRemoteSwiftPackageReference "ApolloNetwork" */,
 			);
 			productRefGroup = 867EBD652C3A1E29004C4DDD /* Products */;
 			projectDirPath = "";
@@ -369,6 +363,7 @@
 				CODE_SIGN_ENTITLEMENTS = DSKY/DSKY.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				DEAD_CODE_STRIPPING = YES;
+				DEVELOPMENT_TEAM = 744SYG6SJD;
 				ENABLE_APP_SANDBOX = YES;
 				ENABLE_HARDENED_RUNTIME = YES;
 				ENABLE_OUTGOING_NETWORK_CONNECTIONS = YES;
@@ -388,7 +383,7 @@
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
 				LD_RUNPATH_SEARCH_PATHS = "@executable_path/Frameworks";
 				"LD_RUNPATH_SEARCH_PATHS[sdk=macosx*]" = "@executable_path/../Frameworks";
-				PRODUCT_BUNDLE_IDENTIFIER = com.ramsaycons.ApoDisKey;
+				PRODUCT_BUNDLE_IDENTIFIER = lk.ApoDisKey;
 				SDKROOT = auto;
 				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator macosx";
 				SWIFT_EMIT_LOC_STRINGS = YES;
@@ -405,6 +400,7 @@
 				CODE_SIGN_ENTITLEMENTS = DSKY/DSKY.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				DEAD_CODE_STRIPPING = YES;
+				DEVELOPMENT_TEAM = 744SYG6SJD;
 				ENABLE_APP_SANDBOX = YES;
 				ENABLE_HARDENED_RUNTIME = YES;
 				ENABLE_OUTGOING_NETWORK_CONNECTIONS = YES;
@@ -424,7 +420,7 @@
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
 				LD_RUNPATH_SEARCH_PATHS = "@executable_path/Frameworks";
 				"LD_RUNPATH_SEARCH_PATHS[sdk=macosx*]" = "@executable_path/../Frameworks";
-				PRODUCT_BUNDLE_IDENTIFIER = com.ramsaycons.ApoDisKey;
+				PRODUCT_BUNDLE_IDENTIFIER = lk.ApoDisKey;
 				SDKROOT = auto;
 				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator macosx";
 				SWIFT_EMIT_LOC_STRINGS = YES;
@@ -439,10 +435,11 @@
 				CLANG_ENABLE_OBJC_WEAK = YES;
 				CODE_SIGN_STYLE = Automatic;
 				DEAD_CODE_STRIPPING = YES;
+				DEVELOPMENT_TEAM = 744SYG6SJD;
 				GENERATE_INFOPLIST_FILE = YES;
 				IPHONEOS_DEPLOYMENT_TARGET = 17.6;
 				MACOSX_DEPLOYMENT_TARGET = 14.6;
-				PRODUCT_BUNDLE_IDENTIFIER = com.ramsaycons.DSKYTests;
+				PRODUCT_BUNDLE_IDENTIFIER = lk.DSKYTests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = auto;
 				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator macosx";
@@ -458,10 +455,11 @@
 				CLANG_ENABLE_OBJC_WEAK = YES;
 				CODE_SIGN_STYLE = Automatic;
 				DEAD_CODE_STRIPPING = YES;
+				DEVELOPMENT_TEAM = 744SYG6SJD;
 				GENERATE_INFOPLIST_FILE = YES;
 				IPHONEOS_DEPLOYMENT_TARGET = 17.6;
 				MACOSX_DEPLOYMENT_TARGET = 14.6;
-				PRODUCT_BUNDLE_IDENTIFIER = com.ramsaycons.DSKYTests;
+				PRODUCT_BUNDLE_IDENTIFIER = lk.DSKYTests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = auto;
 				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator macosx";
@@ -502,29 +500,6 @@
 		};
 /* End XCConfigurationList section */
 
-/* Begin XCRemoteSwiftPackageReference section */
-		862F89E52EA024DB00AD6F66 /* XCRemoteSwiftPackageReference "ApolloNetwork" */ = {
-			isa = XCRemoteSwiftPackageReference;
-			repositoryURL = "https://github.com/gavineadie/ApolloNetwork";
-			requirement = {
-				kind = upToNextMajorVersion;
-				minimumVersion = 0.1.0;
-			};
-		};
-/* End XCRemoteSwiftPackageReference section */
-
-/* Begin XCSwiftPackageProductDependency section */
-		862F89E62EA024DB00AD6F66 /* ApolloNetwork */ = {
-			isa = XCSwiftPackageProductDependency;
-			package = 862F89E52EA024DB00AD6F66 /* XCRemoteSwiftPackageReference "ApolloNetwork" */;
-			productName = ApolloNetwork;
-		};
-		862F8A2A2EA029E700AD6F66 /* ApolloNetwork */ = {
-			isa = XCSwiftPackageProductDependency;
-			package = 862F89E52EA024DB00AD6F66 /* XCRemoteSwiftPackageReference "ApolloNetwork" */;
-			productName = ApolloNetwork;
-		};
-/* End XCSwiftPackageProductDependency section */
 	};
 	rootObject = 867EBD5C2C3A1E29004C4DDD /* Project object */;
 }

@@ -6,10 +6,9 @@
 //
 
 import Foundation
-import ApolloNetwork
 import AVFoundation
 
-public enum BackColor {
+public enum BackColor: Sendable {
     case off
     case white
     case yellow
@@ -23,7 +22,7 @@ typealias Nums = (String, Bool)
 
 @Observable final class DisKeyModel {
 
-    static let shared = DisKeyModel()
+  nonisolated(unsafe) static let shared = DisKeyModel()
 
 /*╭╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╮
   ┆ .. properties relating to the application itself ..                                              ┆
@@ -144,7 +143,7 @@ extension DisKeyModel {
             15: ("OPR ERR",        .off),
             16: ("PRIO DISP",      .off),
             17: ("NO DAP",         .off),
-            
+
             21: ("TEMP",           .off),
             22: ("GIMBAL\nLOCK",   .off),
             23: ("PROG",           .off),

@@ -1,15 +1,6 @@
 {
   "originHash" : "585de65ec84bdc73f6deeeae4c06a24b4faad1e9a27fec127e94e749437f478e",
   "pins" : [
-    {
-      "identity" : "apollonetwork",
-      "kind" : "remoteSourceControl",
-      "location" : "https://github.com/gavineadie/ApolloNetwork",
-      "state" : {
-        "revision" : "eb7cb1f1dd298ebd59bb95548fc0469c8411c4ce",
-        "version" : "0.1.7"
-      }
-    }
   ],
   "version" : 3
 }

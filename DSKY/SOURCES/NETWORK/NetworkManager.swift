@@ -6,7 +6,6 @@
 //
 
 import Foundation
-import ApolloNetwork
 
 actor NetworkManager {
     private var network: Network?
