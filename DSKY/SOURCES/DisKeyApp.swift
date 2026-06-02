@@ -17,9 +17,22 @@ struct DisKeyApp: App {
 
 #if os(macOS)
     @NSApplicationDelegateAdaptor(AppDelegate.self) var appDelegate
+    @AppStorage("alwaysOnTop") private var alwaysOnTop = true
 
     class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
         func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool { true }
+
+        func applicationDidFinishLaunching(_ notification: Notification) {
+            let enabled = UserDefaults.standard.object(forKey: "alwaysOnTop") as? Bool ?? true
+            DispatchQueue.main.async {
+                applyAlwaysOnTopWindowLevel(enabled)
+            }
+        }
+
+        func applicationDidBecomeActive(_ notification: Notification) {
+            let enabled = UserDefaults.standard.object(forKey: "alwaysOnTop") as? Bool ?? true
+            applyAlwaysOnTopWindowLevel(enabled)
+        }
     }
 #endif
 
@@ -32,6 +45,8 @@ struct DisKeyApp: App {
         model.windowH = CGFloat(656)
 
 #if os(macOS)
+        // Force startup default each launch: main window starts pinned.
+        UserDefaults.standard.set(true, forKey: "alwaysOnTop")
         extractOptions()                        // get any command arguments ..
 #endif
 
@@ -59,6 +74,9 @@ struct DisKeyApp: App {
             CommandGroup(replacing: .systemServices) { }
             CommandGroup(replacing: .windowSize) { }
             CommandGroup(replacing: .windowArrangement) { }
+            CommandGroup(after: .windowArrangement) {
+                Toggle("Always on Top", isOn: $alwaysOnTop)
+            }
 #if os(macOS)
             CommandGroup(replacing: .help) {
                 Button("ApoDisKey Help") { openHelpWindow() }
@@ -78,6 +96,7 @@ struct DisKeyApp: App {
         }
         helpWindowController?.showWindow(nil)
         helpWindowController?.window?.makeKeyAndOrderFront(nil)
+        applyAlwaysOnTopWindowLevel(alwaysOnTop)
     }
 
     private func openNewsWindow() {
@@ -86,12 +105,17 @@ struct DisKeyApp: App {
         }
         newsWindowController?.showWindow(nil)
         newsWindowController?.window?.makeKeyAndOrderFront(nil)
+        applyAlwaysOnTopWindowLevel(alwaysOnTop)
     }
 #endif
 
 }
 
 struct AppView: View {
+#if os(macOS)
+    @AppStorage("alwaysOnTop") private var alwaysOnTop = true
+#endif
+
     var body: some View {
         let scaleFactor = model.fullSize ? 1 : 0.5
         VStack {
@@ -105,6 +129,17 @@ struct AppView: View {
             }
 #endif
         }
+#if os(macOS)
+        .onAppear {
+            applyAlwaysOnTopWindowLevel(alwaysOnTop)
+            DispatchQueue.main.async {
+                applyAlwaysOnTopWindowLevel(alwaysOnTop)
+            }
+        }
+        .onChange(of: alwaysOnTop) { _, newValue in
+            applyAlwaysOnTopWindowLevel(newValue)
+        }
+#endif
     }
 }
 
@@ -207,6 +242,17 @@ struct MonitorView: View {
 
 #if swift(>=5.9)
 #Preview("Monitor") { MonitorView() }
+#endif
+
+#if os(macOS)
+@MainActor
+private func applyAlwaysOnTopWindowLevel(_ enabled: Bool) {
+    let level: NSWindow.Level = enabled ? .floating : .normal
+    for window in NSApplication.shared.windows where window.styleMask.contains(.titled) {
+        window.level = level
+    }
+    logger.log("Window always-on-top: \(enabled ? "ON" : "OFF")")
+}
 #endif
 
 func startNetwork() {
