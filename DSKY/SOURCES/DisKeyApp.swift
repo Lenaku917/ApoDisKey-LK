@@ -166,19 +166,16 @@ struct MonitorView: View {
                 Button("Apollo CM 8-17",
                        action: {
                     model.cmLamps()
-                    model.elPowerOn = true
                     menuString = "Apollo CM 8-17"
                 })
                 Button("Apollo LM 11-14",
                        action: {
                     model.lm0Lamps()
-                    model.elPowerOn = true
                     menuString = "Apollo LM 11-14"
                 })
                 Button("Apollo LM 15-17",
                        action: {
                     model.lm1Lamps()
-                    model.elPowerOn = true
                     menuString = "Apollo LM 15-17"
                 })
             }
@@ -204,6 +201,7 @@ struct MonitorView: View {
                     """)
                 model.network = Network(ipAddr, ipPort)
                 model.network.start()
+                updateELPowerFromNetwork(reason: "Monitor Connect")
 
 /*╭╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╮
   ┆ start receiving packets from the AGC ..                                                          ┆
@@ -216,6 +214,7 @@ struct MonitorView: View {
                         } catch PacketError.ignore_FF_FF_FF_FF {
                         } catch {
                             logger.error("←→ rx loop exit: \(error.localizedDescription)")
+                            model.elPowerOn = false
                             break
                         }
                     }
@@ -231,6 +230,7 @@ struct MonitorView: View {
                         logger.log("«««    DSKY 032:    \(zeroPadWord(value)) BITS (15)")
                     } catch {
                         logger.error("\(error.localizedDescription)")
+                        model.elPowerOn = false
                     }
                 }
             } )
@@ -269,18 +269,19 @@ func startNetwork() {
             """)
         model.network = Network(model.ipAddr, model.ipPort)
         model.network.start()
+        updateELPowerFromNetwork(reason: "cmdArgs")
     }
 #endif
 
 #if os(iOS) || os(tvOS)
     model.statusLights = DisKeyModel.lunarModule0
-    model.elPowerOn = true
 //  model.network = Network("192.168.1.232", 19697)                 // .. Ubuntu
     model.network = Network("192.168.1.100", 19697)                 // .. MaxBook
 //  model.network = Network("192.168.1.192", 19697)                 // .. iPhone
 //  model.network = Network("192.168.1.228", 19697)                 // .. iPadM4
 //  model.network = Network("127.0.0.1",     19697)                 // .. localhost
     model.network.start()
+    updateELPowerFromNetwork(reason: "iOS/tvOS startup")
 #endif
 
 /*╭╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╮
@@ -294,8 +295,17 @@ func startNetwork() {
             } catch PacketError.ignore_FF_FF_FF_FF {
             } catch {
                 logger.error("←→ rx loop exit: \(error.localizedDescription)")
+                model.elPowerOn = false
                 break
             }
         }
     }
+}
+
+private func updateELPowerFromNetwork(reason: String) {
+    let connected = model.network.connection.state == .ready
+    if model.elPowerOn != connected {
+        logger.log("EL Power: \(connected ? "ON" : "OFF") via \(reason)")
+    }
+    model.elPowerOn = connected
 }

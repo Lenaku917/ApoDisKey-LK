@@ -227,8 +227,6 @@ func extractOptions() {
                 model.lm0Lamps()
             }
 
-            model.elPowerOn = true
-
         } else if arg.hasPrefix("--ip=") {
             arg.removeFirst(5)
             model.ipAddr = arg
