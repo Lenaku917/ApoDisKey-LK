@@ -62,6 +62,7 @@ typealias Nums = (String, Bool)
   ┆ .. the electroluminescent DSKY top-right panel (initial values are cleared when AGC connects) .. ┆
   ╰╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╯*/
     public var elPowerOn = false                        // electroluminescent power (starts OFF)
+    public var isNetworkConnected: Bool { network.connection.state == .ready }
 
     public var comp: Nums = ("--", false)            // numbers (none for COMP), placard=dark
     public var mode: Nums = ("__", false)

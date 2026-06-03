@@ -39,7 +39,6 @@
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
 			membershipExceptions = (
 				FONTS/Fonts.plist,
-				SOURCES/NETWORK/NetworkManager.swift,
 			);
 			target = 867EBD632C3A1E29004C4DDD /* ApoDisKey */;
 		};
@@ -499,7 +498,6 @@
 			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
-
 	};
 	rootObject = 867EBD5C2C3A1E29004C4DDD /* Project object */;
 }

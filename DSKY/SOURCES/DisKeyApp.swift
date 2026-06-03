@@ -11,6 +11,7 @@ import OSLog
 let logger = Logger(subsystem: "com.ramsaycons.ApoDisKey", category: "main")
 
 nonisolated(unsafe) let model = DisKeyModel.shared
+nonisolated(unsafe) private var networkReceiveTask: Task<Void, Never>?
 
 @main
 struct DisKeyApp: App {
@@ -29,10 +30,6 @@ struct DisKeyApp: App {
             }
         }
 
-        func applicationDidBecomeActive(_ notification: Notification) {
-            let enabled = UserDefaults.standard.object(forKey: "alwaysOnTop") as? Bool ?? true
-            applyAlwaysOnTopWindowLevel(enabled)
-        }
     }
 #endif
 
@@ -45,8 +42,6 @@ struct DisKeyApp: App {
         model.windowH = CGFloat(656)
 
 #if os(macOS)
-        // Force startup default each launch: main window starts pinned.
-        UserDefaults.standard.set(true, forKey: "alwaysOnTop")
         extractOptions()                        // get any command arguments ..
 #endif
 
@@ -97,7 +92,7 @@ struct DisKeyApp: App {
         }
         helpWindowController?.showWindow(nil)
         helpWindowController?.window?.makeKeyAndOrderFront(nil)
-        applyAlwaysOnTopWindowLevel(alwaysOnTop)
+        helpWindowController?.window?.level = alwaysOnTop ? .floating : .normal
     }
 
     private func openNewsWindow() {
@@ -106,7 +101,7 @@ struct DisKeyApp: App {
         }
         newsWindowController?.showWindow(nil)
         newsWindowController?.window?.makeKeyAndOrderFront(nil)
-        applyAlwaysOnTopWindowLevel(alwaysOnTop)
+        newsWindowController?.window?.level = alwaysOnTop ? .floating : .normal
     }
 #endif
 
@@ -124,19 +119,13 @@ struct AppView: View {
                 .frame(width: model.windowW, height: model.windowH)        // 569 × 656 pixels
                 .scaleEffect(scaleFactor)
 #if os(macOS)
-            if model.fullSize && !model.haveCmdArgs {
+            if model.fullSize && !model.isNetworkConnected {
                 Divider()
                 MonitorView()
             }
 #endif
         }
 #if os(macOS)
-        .onAppear {
-            applyAlwaysOnTopWindowLevel(alwaysOnTop)
-            DispatchQueue.main.async {
-                applyAlwaysOnTopWindowLevel(alwaysOnTop)
-            }
-        }
         .onChange(of: alwaysOnTop) { _, newValue in
             applyAlwaysOnTopWindowLevel(newValue)
         }
@@ -148,9 +137,14 @@ struct AppView: View {
 
 struct MonitorView: View {
 
-    @State private var ipAddr: String = ""
-    @State private var ipPort: UInt16 = 0
-    @State private var menuString = "Select Mission"
+    @AppStorage("monitor.ipAddr") private var ipAddr: String = "localhost"
+    @AppStorage("monitor.ipPort") private var ipPort: Int = 19697
+    @AppStorage("monitor.menuString") private var menuString = "Select Mission"
+
+    private var resolvedPort: UInt16? {
+        guard let port = UInt16(exactly: ipPort), port > 0 else { return nil }
+        return port
+    }
 
     static var integer: NumberFormatter = {
         let formatter = NumberFormatter()
@@ -165,18 +159,15 @@ struct MonitorView: View {
             Menu(menuString) {
                 Button("Apollo CM 8-17",
                        action: {
-                    model.cmLamps()
-                    menuString = "Apollo CM 8-17"
+                    applyMissionSelection("Apollo CM 8-17")
                 })
                 Button("Apollo LM 11-14",
                        action: {
-                    model.lm0Lamps()
-                    menuString = "Apollo LM 11-14"
+                    applyMissionSelection("Apollo LM 11-14")
                 })
                 Button("Apollo LM 15-17",
                        action: {
-                    model.lm1Lamps()
-                    menuString = "Apollo LM 15-17"
+                    applyMissionSelection("Apollo LM 15-17")
                 })
             }
 
@@ -192,52 +183,39 @@ struct MonitorView: View {
             Button("Connect",
                    systemImage: "phone.connection",
                    action: {
+                guard let port = resolvedPort else { return }
                 model.ipAddr = ipAddr
-                model.ipPort = ipPort
+                model.ipPort = port
                 logger.log("""
                     →→→ monitor set: \
                     ipAddr=\(ipAddr, privacy: .public), \
-                    ipPort=\(ipPort, privacy: .public)
+                    ipPort=\(port, privacy: .public)
                     """)
-                model.network = Network(ipAddr, ipPort)
-                model.network.start()
-                updateELPowerFromNetwork(reason: "Monitor Connect")
-
-/*╭╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╮
-  ┆ start receiving packets from the AGC ..                                                          ┆
-  ╰╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╯*/
-                Task {
-                    while true {
-                        do {
-                            let (channel, action, _) = try parseIoPacket(try await model.network.receive(length: 4))
-                                channelAction(channel, action)
-                        } catch PacketError.ignore_FF_FF_FF_FF {
-                        } catch {
-                            logger.error("←→ rx loop exit: \(error.localizedDescription)")
-                            model.elPowerOn = false
-                            break
-                        }
-                    }
-                }
-
-/*╭╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╮
-  ┆ send a u-bit channel command to indicate channel 0o032 sends bit-14 to the AGC ..                ┆
-  ╰╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╯*/
-                Task {
-                    let value: UInt16 = 0b0010_0000_0000_0000
-                    do {
-                        try await model.network.send(formIoPacket(0o0232, value))
-                        logger.log("«««    DSKY 032:    \(zeroPadWord(value)) BITS (15)")
-                    } catch {
-                        logger.error("\(error.localizedDescription)")
-                        model.elPowerOn = false
-                    }
-                }
+                startNetwork(connectFromMonitor: true)
             } )
-            .disabled(ipAddr.isEmpty || ipPort == 0 || menuString == "Select Mission")
+            .disabled(ipAddr.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || resolvedPort == nil || menuString == "Select Mission")
         }
         .padding(5)
         .background(.gray)
+        .onAppear {
+            applyMissionSelection(menuString)
+        }
+    }
+
+    private func applyMissionSelection(_ selection: String) {
+        switch selection {
+            case "Apollo CM 8-17":
+                model.cmLamps()
+                menuString = selection
+            case "Apollo LM 11-14":
+                model.lm0Lamps()
+                menuString = selection
+            case "Apollo LM 15-17":
+                model.lm1Lamps()
+                menuString = selection
+            default:
+                break
+        }
     }
 }
 
@@ -256,12 +234,12 @@ private func applyAlwaysOnTopWindowLevel(_ enabled: Bool) {
 }
 #endif
 
-func startNetwork() {
+func startNetwork(connectFromMonitor: Bool = false) {
 /*╭╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╮
   ┆ if command arguments for network are good, use them ..                                           ┆
   ╰╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╯*/
 #if os(macOS)
-    if model.haveCmdArgs {
+    if model.haveCmdArgs || connectFromMonitor {
         logger.log("""
             →→→ cmdArgs set: \
             ipAddr=\(model.ipAddr, privacy: .public), \
@@ -269,7 +247,20 @@ func startNetwork() {
             """)
         model.network = Network(model.ipAddr, model.ipPort)
         model.network.start()
-        updateELPowerFromNetwork(reason: "cmdArgs")
+        updateELPowerFromNetwork(reason: connectFromMonitor ? "Monitor Connect" : "cmdArgs")
+
+        if connectFromMonitor {
+            Task {
+                let value: UInt16 = 0b0010_0000_0000_0000
+                do {
+                    try await model.network.send(formIoPacket(0o0232, value))
+                    logger.log("«««    DSKY 032:    \(zeroPadWord(value)) BITS (15)")
+                } catch {
+                    logger.error("\(error.localizedDescription)")
+                    model.elPowerOn = false
+                }
+            }
+        }
     }
 #endif
 
@@ -284,16 +275,17 @@ func startNetwork() {
     updateELPowerFromNetwork(reason: "iOS/tvOS startup")
 #endif
 
-/*╭╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╮
-  ┆ start receiving packets from the AGC ..                                                          ┆
-  ╰╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╯*/
-    Task {
-        while true {
+    guard model.network.connection.state == .ready else { return }
+
+    networkReceiveTask?.cancel()
+    networkReceiveTask = Task {
+        while !Task.isCancelled {
             do {
                 let (channel, action, _) = try parseIoPacket(try await model.network.receive(length: 4))
                 channelAction(channel, action)
             } catch PacketError.ignore_FF_FF_FF_FF {
             } catch {
+                if Task.isCancelled { break }
                 logger.error("←→ rx loop exit: \(error.localizedDescription)")
                 model.elPowerOn = false
                 break
@@ -304,8 +296,9 @@ func startNetwork() {
 
 private func updateELPowerFromNetwork(reason: String) {
     let connected = model.network.connection.state == .ready
+
     if model.elPowerOn != connected {
         logger.log("EL Power: \(connected ? "ON" : "OFF") via \(reason)")
+        model.elPowerOn = connected
     }
-    model.elPowerOn = connected
 }

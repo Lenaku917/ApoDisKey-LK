@@ -18,6 +18,7 @@ enum ConnectionState {
     case cancelled
 }
 
+@Observable
 final class ConnectionStatus {
     var state: ConnectionState = .none
 }
@@ -31,8 +32,8 @@ enum NetworkFailure: Error {
     case disconnected
 }
 
-final class Network {
-    let connection = ConnectionStatus()
+final class Network: @unchecked Sendable {
+    var connection = ConnectionStatus()
 
     private let host: String
     private let port: UInt16
@@ -40,8 +41,8 @@ final class Network {
     private let connectLock = NSLock()
 
     init() {
-        self.host = ""
-        self.port = 0
+        self.host = "localhost"
+        self.port = 19697
         connection.state = .none
     }
 
