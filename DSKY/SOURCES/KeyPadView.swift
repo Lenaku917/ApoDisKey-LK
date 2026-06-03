@@ -107,9 +107,9 @@ struct KeyView: View {
             .cornerRadius(keyCorner)
             .shadow(color: Color.white.opacity(0.3),
                     radius: 1, x: -1, y: -1)
-#if os(macOS)
+        #if os(macOS)
             .acceptClickThrough()
-#endif
+        #endif
             .onTapGesture {
                 if model.network.connection.state != .ready {
                     logger.log("key press while network not ready ..")
@@ -119,12 +119,14 @@ struct KeyView: View {
                 if keyCode < 99 {
                     logger.log("«««    \(keyText(keyCode).replacingOccurrences(of: "\n", with: " ")) (\(keyCode))")
 
-                    AudioServicesPlaySystemSound(clickSoundID)
+                    if !model.audioMutedAll && !model.audioButtonPressMuted {
+                        AudioServicesPlaySystemSound(clickSoundID)
+                    }
                     Task {
                         do {
                             try await model.network.send(formIoPacket(0o015, keyCode))
                         } catch {
-                            logger.error("\(error.localizedDescription)")
+                            logger.error("key press send error: \(error.localizedDescription)")
                         }
                     }
                 }
@@ -149,7 +151,7 @@ struct KeyView: View {
                                 do {
                                     try await model.network.send(formIoPacket(0o032, value))
                                 } catch {
-                                    logger.error("\(error.localizedDescription)")
+                                    logger.error("key press send error: \(error.localizedDescription)")
                                 }
                             }
                         }
@@ -169,7 +171,7 @@ struct KeyView: View {
                                 do {
                                     try await model.network.send(formIoPacket(0o032, value))
                                 } catch {
-                                    logger.error("\(error.localizedDescription)")
+                                    logger.error("key press send error: \(error.localizedDescription)")
                                 }
                             }
                         }

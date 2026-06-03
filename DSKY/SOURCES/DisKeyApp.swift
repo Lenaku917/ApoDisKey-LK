@@ -14,6 +14,10 @@ nonisolated(unsafe) let model = DisKeyModel.shared
 
 @main
 struct DisKeyApp: App {
+    @AppStorage("audioMutedAll") private var audioMutedAll = false
+    @AppStorage("audioSyncTimeS") private var audioSyncTimeS = 0.006
+    @AppStorage("audioRelayClicksMuted") private var audioRelayClicksMuted = false
+    @AppStorage("audioButtonPressMuted") private var audioButtonPressMuted = false
 
     #if os(macOS)
         @NSApplicationDelegateAdaptor(AppDelegate.self) var appDelegate
@@ -43,6 +47,7 @@ struct DisKeyApp: App {
             extractOptions()                        // get any command arguments ..
         #endif
 
+        applyStoredAudioSettingsToModel()
         startNetworkOnStartup()
     }
 
@@ -51,7 +56,7 @@ struct DisKeyApp: App {
   ╰╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╯*/
     var body: some Scene {
         WindowGroup {
-            AppView()
+            AppView(audioMutedAll: $audioMutedAll, audioSyncTimeS: $audioSyncTimeS, audioRelayClicksMuted: $audioRelayClicksMuted, audioButtonPressMuted: $audioButtonPressMuted, alwaysOnTop: $alwaysOnTop)
         }
         .defaultSize(CGSize(width: model.windowW, height: model.windowH))
         #if os(macOS)
@@ -61,15 +66,14 @@ struct DisKeyApp: App {
   ┆ Menu management ..                                                                               ┆
   ╰╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╯*/
         .commands {
-            //CommandGroup(replacing: .pasteboard) { }        // "Cut", "Copy", "Paste", ..
             CommandGroup(replacing: .newItem) { }           // "File" removed ("New", "Open", ..)
+            //CommandGroup(replacing: .pasteboard) { }        // "Cut", "Copy", "Paste", ..
             //CommandGroup(replacing: .undoRedo) { }
             CommandGroup(replacing: .systemServices) { }
             CommandGroup(replacing: .windowSize) { }
             CommandGroup(replacing: .windowArrangement) { }
-            CommandGroup(after: .windowArrangement) {
-                Toggle("Always on Top", isOn: $alwaysOnTop)
-                    .keyboardShortcut("p", modifiers: [.command, .option])
+            CommandMenu("Settings") {
+                SettingsMenuContent(audioMutedAll: $audioMutedAll, audioSyncTimeS: $audioSyncTimeS, audioRelayClicksMuted: $audioRelayClicksMuted, audioButtonPressMuted: $audioButtonPressMuted, alwaysOnTop: $alwaysOnTop)
             }
             #if os(macOS)
                 CommandGroup(replacing: .help) {
@@ -106,9 +110,11 @@ struct DisKeyApp: App {
 }
 
 struct AppView: View {
-    #if os(macOS)
-        @AppStorage("alwaysOnTop") private var alwaysOnTop = true
-    #endif
+    @Binding var audioMutedAll: Bool
+    @Binding var audioSyncTimeS: Double
+    @Binding var audioRelayClicksMuted: Bool
+    @Binding var audioButtonPressMuted: Bool
+    @Binding var alwaysOnTop: Bool
 
     var body: some View {
         let scaleFactor = model.fullSize ? 1 : 0.5
@@ -116,6 +122,11 @@ struct AppView: View {
             DisKeyView()
                 .frame(width: model.windowW, height: model.windowH)        // 569 × 656 pixels
                 .scaleEffect(scaleFactor)
+                #if os(macOS)
+                .contextMenu {
+                    SettingsMenuContent(audioMutedAll: $audioMutedAll, audioSyncTimeS: $audioSyncTimeS, audioRelayClicksMuted: $audioRelayClicksMuted, audioButtonPressMuted: $audioButtonPressMuted, alwaysOnTop: $alwaysOnTop)
+                }
+                #endif
             #if os(macOS)
             //ToDo: what if half size no mission/network?
                 if model.fullSize && !model.isNetworkConnected {
@@ -132,7 +143,7 @@ struct AppView: View {
     }
 }
 
-#Preview("AppView") { AppView() }
+#Preview("AppView") { AppView(audioMutedAll: .constant(false), audioSyncTimeS: .constant(0.006), audioRelayClicksMuted: .constant(false), audioButtonPressMuted: .constant(false), alwaysOnTop: .constant(true)) }
 
 struct MonitorView: View {
 
@@ -314,5 +325,87 @@ private func applyMissionSelectionToModel(_ selection: String) -> Bool {
             return true
         default:
             return false
+    }
+}
+
+#if os(macOS)
+private extension DisKeyApp {
+    func applyStoredAudioSettingsToModel() {
+        model.audioMutedAll = audioMutedAll
+        model.audioSyncTimeS = audioSyncTimeS
+        model.audioRelayClicksMuted = audioRelayClicksMuted
+        model.audioButtonPressMuted = audioButtonPressMuted
+    }
+}
+#endif
+
+struct SettingsMenuContent: View {
+    @Binding var audioMutedAll: Bool
+    @Binding var audioSyncTimeS: Double
+    @Binding var audioRelayClicksMuted: Bool
+    @Binding var audioButtonPressMuted: Bool
+    @Binding var alwaysOnTop: Bool
+
+    var body: some View {
+        Button(model.audioMutedAll ? "🔇 Unmute Audio" : "🔊 Mute Audio") {
+            model.audioMutedAll.toggle()
+            audioMutedAll = model.audioMutedAll
+        }
+        .keyboardShortcut("m", modifiers: [.command])
+
+        Toggle("Button Press", isOn: Binding(
+            get: { !model.audioButtonPressMuted },
+            set: { model.audioButtonPressMuted = !$0; audioButtonPressMuted = !$0 }
+        )) .disabled(model.audioMutedAll)
+
+        Toggle("Relay Clicks", isOn: Binding(
+            get: { !model.audioRelayClicksMuted },
+            set: { model.audioRelayClicksMuted = !$0; audioRelayClicksMuted = !$0 }
+        )) .disabled(model.audioMutedAll)
+
+        /* Button(model.audioButtonPressMuted ? "🔇 Button Press" : "🔊 Button Press") {
+            model.audioButtonPressMuted.toggle()
+            audioButtonPressMuted = model.audioButtonPressMuted
+        } .disabled(model.audioMutedAll)
+
+        Button(model.audioRelayClicksMuted ? "🔇 Relay Clicks" : "🔊 Relay Clicks") {
+            model.audioRelayClicksMuted.toggle()
+            audioRelayClicksMuted = model.audioRelayClicksMuted
+        } .disabled(model.audioMutedAll) */
+
+        Text("Relay Sync Delay: \(model.audioSyncTimeS * 1000, specifier: "%.0f")ms")
+
+        Button(" +  Increase") {
+            let next = min(0.02, model.audioSyncTimeS + 0.001)
+            model.audioSyncTimeS = next
+            audioSyncTimeS = next
+        } .disabled(model.audioMutedAll || model.audioSyncTimeS >= 0.02)
+        .keyboardShortcut("+", modifiers: [.command])
+
+        Button(" -  Decrease") {
+            let next = max(0.001, model.audioSyncTimeS - 0.001)
+            model.audioSyncTimeS = next
+            audioSyncTimeS = next
+        } .disabled(model.audioMutedAll || model.audioSyncTimeS <= 0.001)
+        .keyboardShortcut("-", modifiers: [.command])
+
+        Divider()
+
+        Text("\(model.ipAddr) : \(String(model.ipPort))")
+        Button(model.isNetworkConnected ? "Disconnect" : "Connect") {
+             if model.isNetworkConnected {
+                logger.log("Disconnecting from network at \(model.ipAddr, privacy: .public):\(model.ipPort, privacy: .public)")
+                model.network.stop()
+                updateELPowerFromNetwork(reason: "Settings Disconnect")
+             } else {
+                startNetworkForMonitorButton()
+             }
+        }
+
+
+        Divider()
+
+        Toggle("Always on Top", isOn: $alwaysOnTop)
+        .keyboardShortcut("p", modifiers: [.command])
     }
 }

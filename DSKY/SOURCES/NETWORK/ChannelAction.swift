@@ -59,10 +59,22 @@ private final class RelaySoundboard {
     private let lock = NSLock()
     private var pending = RelayTransitionTally()
     private var flushWorkItem: DispatchWorkItem?
-    private let coalesceInterval: TimeInterval = 0.006
+
+    private var coalesceInterval: TimeInterval {
+        max(0.002, model.audioSyncTimeS)
+    }
 
     func enqueue(_ tally: RelayTransitionTally) {
         guard tally.total > 0 else { return }
+
+        if model.audioMutedAll || model.audioRelayClicksMuted {
+            lock.lock()
+            pending = RelayTransitionTally()
+            flushWorkItem?.cancel()
+            flushWorkItem = nil
+            lock.unlock()
+            return
+        }
 
         lock.lock()
         pending.clickCount += tally.clickCount
@@ -82,6 +94,14 @@ private final class RelaySoundboard {
     }
 
     private func flush() {
+        if model.audioMutedAll || model.audioRelayClicksMuted {
+            lock.lock()
+            pending = RelayTransitionTally()
+            flushWorkItem = nil
+            lock.unlock()
+            return
+        }
+
         lock.lock()
         let tally = pending
         pending = RelayTransitionTally()
@@ -96,6 +116,7 @@ private final class RelaySoundboard {
         } else {
             off.play(volume: 1.0)
         }
+        //logger.log("Relay interval: \(self.coalesceInterval)")
     }
 }
 

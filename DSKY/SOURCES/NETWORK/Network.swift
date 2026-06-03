@@ -121,6 +121,12 @@ final class Network: @unchecked Sendable {
         }
     }
 
+    func stop() {
+        setConnectionState(.cancelled)
+        receiveTask?.cancel()
+        closeSocket()
+    }
+
     func receive(length: Int) async throws -> Data {
         guard length > 0 else { return Data() }
 

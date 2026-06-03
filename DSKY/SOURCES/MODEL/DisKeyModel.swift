@@ -28,7 +28,6 @@ typealias Nums = (String, Bool)
   ┆ .. properties relating to the application itself ..                                              ┆
   ╰╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╯*/
     public var fullSize = true
-    public var haveCmdArgs = false
 
     public var windowX: CGFloat = -99.0
     public var windowY: CGFloat = -99.0
@@ -63,6 +62,12 @@ typealias Nums = (String, Bool)
   ╰╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╯*/
     public var elPowerOn = false                        // electroluminescent power (starts OFF)
     public var isNetworkConnected: Bool { network.connection.state == .ready }
+
+    // Audio settings
+    var audioMutedAll: Bool = false
+    var audioSyncTimeS: Double = 0.006
+    var audioRelayClicksMuted: Bool = false
+    var audioButtonPressMuted: Bool = false
 
     public var comp: Nums = ("--", false)            // numbers (none for COMP), placard=dark
     public var mode: Nums = ("__", false)
