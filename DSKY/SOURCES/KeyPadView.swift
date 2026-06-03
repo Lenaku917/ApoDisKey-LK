@@ -7,6 +7,7 @@
 
 import SwiftUI
 import AVFoundation
+import AudioToolbox
 
 /*
             ┌────────────────────────────────────────────────────┐
@@ -24,6 +25,13 @@ import AVFoundation
             │         ╰╌╌╌╌╯ ╰╌╌╌╌╯ ╰╌╌╌╌╯ ╰╌╌╌╌╯ ╰╌╌╌╌╯         │
             └────────────────────────────────────────────────────┘
 */
+
+private let clickSoundID: SystemSoundID = {
+    guard let url = Bundle.main.url(forResource: "button_press", withExtension: "aiff") else { return 0 }
+    var soundID: SystemSoundID = 0
+    AudioServicesCreateSystemSoundID(url as CFURL, &soundID)
+    return soundID
+}()
 
 struct KeyPadView: View {
 
@@ -104,18 +112,14 @@ struct KeyView: View {
 #endif
             .onTapGesture {
                 if model.network.connection.state != .ready {
-                    logger.log("any key press while network not ready ..")
-                    startNetwork()
+                    logger.log("key press while network not ready ..")
+                    startNetwork(connectFromMonitor: true)
                 }
 
                 if keyCode < 99 {
                     logger.log("«««    \(keyText(keyCode).replacingOccurrences(of: "\n", with: " ")) (\(keyCode))")
 
-                    if let clickURL = Bundle.main.url(forResource: "button_press", withExtension: "aiff") {
-                        var clickSound: SystemSoundID = 0
-                        AudioServicesCreateSystemSoundID(clickURL as CFURL, &clickSound)
-                        AudioServicesPlaySystemSound(clickSound)
-                    }
+                    AudioServicesPlaySystemSound(clickSoundID)
                     Task {
                         do {
                             try await model.network.send(formIoPacket(0o015, keyCode))
