@@ -113,7 +113,7 @@ struct KeyView: View {
             .onTapGesture {
                 if model.network.connection.state != .ready {
                     logger.log("key press while network not ready ..")
-                    startNetwork(connectFromMonitor: true)
+                    startNetworkForDSKYKeyPress()
                 }
 
                 if keyCode < 99 {

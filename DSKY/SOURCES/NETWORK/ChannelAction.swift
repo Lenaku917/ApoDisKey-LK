@@ -181,6 +181,13 @@ private extension StatusLamp {
 
 func channelAction(_ channel: UInt16, _ value: UInt16, _ boolean: Bool = true) {
 
+    if !Thread.isMainThread {
+        DispatchQueue.main.async {
+            channelAction(channel, value, boolean)
+        }
+        return
+    }
+
     switch channel {
         case 0o005...0o006:
             break
@@ -464,5 +471,11 @@ private func setLamp(_ lamp: StatusLamp,
             """
         )
     }
-    model.lights[lamp]?.1 = color
+
+    if let current = model.lights[index] {
+        model.lights[index] = (current.0, color)
+    } else {
+        logger.error("Missing lamp slot for \(lamp); creating fallback entry")
+        model.lights[index] = (lamp.description, color)
+    }
 }

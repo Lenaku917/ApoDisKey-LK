@@ -39,11 +39,22 @@ final class Network: @unchecked Sendable {
     private let port: UInt16
     private var socketFD: Int32 = -1
     private let connectLock = NSLock()
+    private var receiveTask: Task<Void, Never>?
+
+    private func setConnectionState(_ state: ConnectionState) {
+        if Thread.isMainThread {
+            connection.state = state
+        } else {
+            DispatchQueue.main.async { [connection] in
+                connection.state = state
+            }
+        }
+    }
 
     init() {
         self.host = "localhost"
         self.port = 19697
-        connection.state = .none
+        setConnectionState(.none)
     }
 
     convenience init(_ host: String, _ port: UInt16) {
@@ -51,9 +62,9 @@ final class Network: @unchecked Sendable {
     }
 
     init(_ host: String, _ port: UInt16, connect: Bool = false) {
-        self.host = host
+        self.host = host.trimmingCharacters(in: .whitespacesAndNewlines)
         self.port = port
-        connection.state = .setup
+        setConnectionState(.setup)
 
         if connect {
             start()
@@ -61,14 +72,52 @@ final class Network: @unchecked Sendable {
     }
 
     deinit {
+        receiveTask?.cancel()
         closeSocket()
+    }
+
+    func startDSKYReceiveLoop() {
+        guard connection.state == .ready else { return }
+
+        receiveTask?.cancel()
+        receiveTask = Task { [weak self] in
+            guard let self else { return }
+
+            while !Task.isCancelled {
+                do {
+                    let (channel, action, _) = try parseIoPacket(try await self.receive(length: 4))
+                    channelAction(channel, action)
+                } catch PacketError.ignore_FF_FF_FF_FF {
+                } catch {
+                    if Task.isCancelled { break }
+                    logger.error("←→ rx loop exit: \(error.localizedDescription)")
+                    model.elPowerOn = false
+                    break
+                }
+            }
+        }
+    }
+
+    func sendDSKY032ReadyFromMonitor() {
+        Task { [weak self] in
+            guard let self else { return }
+
+            let value: UInt16 = 0b0010_0000_0000_0000
+            do {
+                try await self.send(formIoPacket(0o0232, value))
+                logger.log("«««    DSKY 032:    \(zeroPadWord(value)) BITS (15)")
+            } catch {
+                logger.error("\(error.localizedDescription)")
+                model.elPowerOn = false
+            }
+        }
     }
 
     func start() {
         do {
             try openSocketIfNeeded()
         } catch {
-            connection.state = .failed
+            setConnectionState(.failed)
         }
     }
 
@@ -127,16 +176,16 @@ final class Network: @unchecked Sendable {
         defer { connectLock.unlock() }
 
         if socketFD >= 0 {
-            connection.state = .ready
+            setConnectionState(.ready)
             return
         }
 
         guard !host.isEmpty, port > 0 else {
-            connection.state = .none
+            setConnectionState(.none)
             throw NetworkFailure.invalidEndpoint
         }
 
-        connection.state = .preparing
+        setConnectionState(.preparing)
 
         var hints = addrinfo(
             ai_flags: AI_ADDRCONFIG,
@@ -153,38 +202,46 @@ final class Network: @unchecked Sendable {
         let portString = String(port)
         let resolveResult = getaddrinfo(host, portString, &hints, &infoPtr)
         guard resolveResult == 0 else {
-            connection.state = .failed
+            setConnectionState(.failed)
             throw NetworkFailure.resolveFailed(resolveResult)
         }
         defer { freeaddrinfo(infoPtr) }
 
         var candidate = infoPtr
+        var lastConnectError: Int32 = 0
         while let info = candidate?.pointee {
             let fd = Darwin.socket(info.ai_family, info.ai_socktype, info.ai_protocol)
             if fd >= 0 {
-                var opt: Int32 = 1
-                setsockopt(fd, SOL_SOCKET, SO_NOSIGPIPE, &opt, socklen_t(MemoryLayout<Int32>.size))
+                configureSocket(fd)
 
                 let connectResult = Darwin.connect(fd, info.ai_addr, info.ai_addrlen)
                 if connectResult == 0 {
                     socketFD = fd
-                    connection.state = .ready
+                    setConnectionState(.ready)
                     return
                 }
 
+                lastConnectError = errno
                 Darwin.close(fd)
             }
 
             candidate = info.ai_next
         }
 
-        connection.state = .failed
-        throw NetworkFailure.connectFailed(errno)
+        setConnectionState(.failed)
+        throw NetworkFailure.connectFailed(lastConnectError)
     }
 
     private func handleFailureState() {
-        connection.state = .failed
+        setConnectionState(.failed)
         closeSocket()
+    }
+
+    private func configureSocket(_ fd: Int32) {
+        var enabled: Int32 = 1
+        _ = setsockopt(fd, SOL_SOCKET, SO_NOSIGPIPE, &enabled, socklen_t(MemoryLayout<Int32>.size))
+        _ = setsockopt(fd, SOL_SOCKET, SO_KEEPALIVE, &enabled, socklen_t(MemoryLayout<Int32>.size))
+        _ = setsockopt(fd, IPPROTO_TCP, TCP_NODELAY, &enabled, socklen_t(MemoryLayout<Int32>.size))
     }
 
     private func closeSocket() {
