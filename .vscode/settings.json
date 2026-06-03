@@ -20,5 +20,52 @@
         "editor.defaultFormatter": "sweetpad.sweetpad",
         "editor.formatOnSave": false,
         "editor.formatOnSaveMode": "modifications"
-    }
+    },
+    "hidefiles.configurationType": "local",
+    "hidefiles.globalConfig": {
+        "profiles": [
+            {
+                "name": "Default",
+                "detail": "",
+                "description": "Test",
+                "hidden": [
+                    ".vscode/",
+                    ".github/"
+                ]
+            },
+            {
+                "name": "Strict",
+                "detail": "Hide everything not immediately required",
+                "hidden": [
+                    "$Default",
+                    "ApoDisKey.icon/",
+                    "ApoDisKey.xcodeproj/",
+                    ".gitignore",
+                    "DSKYTests/",
+                    "DSKY/DSKY.entitlements",
+                    "DSKY/Assets.xcassets/",
+                    "DSKY/FONTS/",
+                    "buildServer.json"
+                ]
+            }
+        ]
+    },
+    "files.exclude": {
+        "**/.git": true,
+        "**/.svn": true,
+        "**/.hg": true,
+        "**/CVS": true,
+        "**/.DS_Store": true,
+        ".vscode/": true,
+        ".github/": true,
+        "ApoDisKey.icon/": true,
+        "ApoDisKey.xcodeproj/": true,
+        ".gitignore": true,
+        "DSKYTests/": true,
+        "DSKY/DSKY.entitlements": true,
+        "DSKY/Assets.xcassets/": true,
+        "DSKY/FONTS/": true,
+        "buildServer.json": true
+    },
+    "hidefiles.selectedProfile": "Strict"
 }
