@@ -1,3 +1,57 @@
+## ApoDisKey - LK
+
+### Disclaimer
+> I've never programmed in Swift before and this is mostly written by AI
+
+I did inspect all the AI code and tried to make it somewhat reasonable. But since I don't have any Swift experience, the code is probably just meh (not great).
+
+The dependency `ApolloNetwork` from gavineadie wasn't available, thus had to "recreate" it. Not sure how good/reliable it is, but it connects to yaAGC and receives data without any issues.
+
+I've only tested this on macOS 15 (Sequoia) with localhost yaAGC.
+
+
+## Features
+
+#### Realistic DSKY Audio:
+- Better [Button-Press sound](https://www.youtube.com/watch?v=JB4x6Uy50sY&t=397s)
+- Added [Relay-Click sounds](https://www.youtube.com/watch?v=Jj4GOcqTmXE&t=8s)
+
+
+#### Right-Click 'Settings' Menu:
+- `Mute Audio` `⌘ M`: mutes all DSKY audio
+- `Mute Button-Press audio`: mutes only button-press audio
+- `Mute Relay-Click audio`: mutes only relay-click audio
+- `Relay Sync Delay`: delays click audio, to output single click, on simutaneous relay changes (default: 6ms)
+- `Adjust Sync Time` `⌘ +/-`: incerease/decrease the sync delay time
+
+---
+
+- Displays `ip : port` of connection
+- `Disconnect` from yaAGC
+- `Select Mission`: BUG: submenu flickers, making it dificult to select a mission
+
+---
+
+- `Always on Top` `⌘ P`: keeps the DSKY window above all other windows
+
+
+## Other Changes
+- DSKY powers on/off depending on connection status to yaAGC
+- Shows/Hides the `ip : port` and `Disconnect` button, depending on connection status to yaAGC
+- Default mission is set to `CM 8-17`
+- Default ip & port are set to `localhost : 25718` (yaAGC's default)
+- Enabled copy/paste of `ip : port` field
+
+### Future Plans
+- [ ] Fix the `Select Mission` submenu flickering issue
+- [ ] Add button-press animations
+- [ ] Test on iPadOS
+- [ ] Port to web (using WebAssembly)
+
+
+<br><br>
+---
+
 ## ApoDisKey
 
 <p align="center"> <img src="https://ramsaycons.com/pix/macOS-DSKY-EC234A.png"
@@ -38,12 +92,12 @@ to communicate with.
 A huge effort started several years ago, and continues, to preserve the details of the AGC. The
 original engineering and manufacturing documents have been preserved and much of
 the software has been recovered from listings or dumped from AGC memory boards.
-This work is documented and preserved at: 
+This work is documented and preserved at:
 [The Virtual AGC Project](https://www.ibiblio.org/apollo/).
 
 Included in the Virtual AGC Project is cross-platform AGC simulator which was
 developed some years ago as part of the Virtual AGC project -- it is the `yaAGC`
-program, written in C, in the Virtual AGC 
+program, written in C, in the Virtual AGC
 [GitHub repository](https://github.com/virtualagc/virtualagc).
 
 ### Connecting ApoDisKey to `yaAGC`
@@ -53,14 +107,14 @@ uninteresting -- rather like an unplugged regular computer keyboard.  The
 emphasis here is that ApoDisKey without `yaAGC` is nothing more than a pretty
 face!
 
-When running on a Mac, the Virtual AGC project will detect the presence of 
+When running on a Mac, the Virtual AGC project will detect the presence of
 ApoDisKey and make it an option to be used in place of the provided DSKY application.
-Obtaining, 
-[building and running Virtual AGC on macOS](https://www.ibiblio.org/apollo/download.html#Sequoia) 
+Obtaining,
+[building and running Virtual AGC on macOS](https://www.ibiblio.org/apollo/download.html#Sequoia)
 is well described in that project's documentation.
 
 Questions, issues and concerns that are related to ApoDisKey specifically should
-come to this author via this project's 
+come to this author via this project's
 [discussions](https://github.com/gavineadie/ApoDisKey/discussions)
 page.
 
@@ -68,7 +122,7 @@ page.
 
 ApoDisKey runs on macOS versions 12 (Monterey) through 15 (Sequoia).
 Some non-critical features are missing when run on the older macOS versions.
-Comments about this are gathered in 
+Comments about this are gathered in
 [Issue 1](https://github.com/gavineadie/ApoDisKey/issues/1)
 
 ### Acknowledgments
@@ -81,18 +135,18 @@ Comments about this are gathered in
 
 _2025-01-27_ (v0.9.2 public release)
 
-* Those who download ApoDiskey and run it in the absence of Virtual AGC (or, at least, the 
+* Those who download ApoDiskey and run it in the absence of Virtual AGC (or, at least, the
   [yaAGC](https://www.ibiblio.org/apollo/yaAGC.html#gsc.tab=0) emulator), the application will
   start with a very dull appearance.
   The intent is to give the impression that the DSKY is powered off.
   In truth, there is not a lot to see or do -- it is a disconnected device.
-    
-  In this case, a bar is presented across the bottom of the window offering: 
+
+  In this case, a bar is presented across the bottom of the window offering:
 
    <p align="center"> <img src="https://ramsaycons.com/pix/macOS-DSKY-BAR-EC234A.jpg" width="600" /> </p>
 
    .. "Choose Mission" will fill the annunciator lamp panels with mission appropriate legends.
-   
+
    .. and, if the IP address and port number of an AGC are entered, the connect button will activate.
 
 _2025-02-01_ (v0.9.3)
