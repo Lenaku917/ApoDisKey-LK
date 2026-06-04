@@ -20,6 +20,12 @@ public enum BackColor: Sendable {
 typealias Lamp = (String, BackColor)
 typealias Nums = (String, Bool)
 
+enum Mission: String, CaseIterable {
+    case cm8_17 = "CM 8-17"
+    case lm11_14 = "LM 11-14"
+    case lm15_17 = "LM 15-17"
+}
+
 @Observable final class DisKeyModel {
 
   nonisolated(unsafe) static let shared = DisKeyModel()
@@ -88,6 +94,15 @@ typealias Nums = (String, Bool)
     public var ipAddr: String = "localhost"
     public var ipPort: UInt16 = 19697
     public var network = Network()                  	// initializes but doesn't start
+    public var mission: Mission = .cm8_17 {
+        didSet {
+            switch mission {
+            case .cm8_17: cmLamps()
+            case .lm11_14: lm0Lamps()
+            case .lm15_17: lm1Lamps()
+            }
+        }
+    }
 }
 
 extension DisKeyModel {

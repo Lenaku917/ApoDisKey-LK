@@ -123,9 +123,9 @@ struct AppView: View {
                 .frame(width: model.windowW, height: model.windowH)        // 569 × 656 pixels
                 .scaleEffect(scaleFactor)
                 #if os(macOS)
-                .contextMenu {
-                    SettingsMenuContent(audioMutedAll: $audioMutedAll, audioSyncTimeS: $audioSyncTimeS, audioRelayClicksMuted: $audioRelayClicksMuted, audioButtonPressMuted: $audioButtonPressMuted, alwaysOnTop: $alwaysOnTop)
-                }
+                    .contextMenu {
+                        SettingsMenuContent(audioMutedAll: $audioMutedAll, audioSyncTimeS: $audioSyncTimeS, audioRelayClicksMuted: $audioRelayClicksMuted, audioButtonPressMuted: $audioButtonPressMuted, alwaysOnTop: $alwaysOnTop)
+                    }
                 #endif
             #if os(macOS)
             //ToDo: what if half size no mission/network?
@@ -149,7 +149,7 @@ struct MonitorView: View {
 
     @AppStorage("monitor.ipAddr") private var ipAddr: String = "localhost"
     @AppStorage("monitor.ipPort") private var ipPort: Int = 19697
-    @AppStorage("monitor.menuString") private var menuString = "Select Mission"
+    @AppStorage("mission") private var mission: Mission = .cm8_17
 
     private var resolvedPort: UInt16? {
         guard let port = UInt16(exactly: ipPort), port > 0 else { return nil }
@@ -165,15 +165,16 @@ struct MonitorView: View {
 
     var body: some View {
         HStack {
-            Menu(menuString) {
-                Button("Apollo CM 8-17",
-                       action: {applyMissionSelection("Apollo CM 8-17")}
+            //FixMe: use menu from other one.
+             Menu(mission.rawValue) {
+                Button("CM 8-17",
+                  action: { setMission(.cm8_17) }
                 )
-                Button("Apollo LM 11-14",
-                       action: {applyMissionSelection("Apollo LM 11-14")}
+                Button("LM 11-14",
+                  action: { setMission(.lm11_14) }
                 )
-                Button("Apollo LM 15-17",
-                       action: {applyMissionSelection("Apollo LM 15-17")}
+                Button("LM 15-17",
+                  action: { setMission(.lm15_17) }
                 )
             }
 
@@ -195,20 +196,20 @@ struct MonitorView: View {
                     startNetworkForMonitorButton()
                 }
             )
-            .disabled(ipAddr.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || resolvedPort == nil || menuString == "Select Mission")
+            .disabled(ipAddr.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || resolvedPort == nil)
         }
         .padding(5)
         .background(.gray)
         .onAppear {
-            applyMissionSelection(menuString)
+            setMission(mission)
         }
     }
 
-    private func applyMissionSelection(_ selection: String) {
-        if applyMissionSelectionToModel(selection) {
-            menuString = selection
-        }
+    private func setMission(_ newMission: Mission) {
+        mission = newMission
+        model.mission = newMission
     }
+
 }
 
 #if swift(>=5.9)
@@ -244,18 +245,21 @@ private enum NetworkConnectTrigger {
 func startNetworkOnStartup() {
     #if os(macOS)
         startNetwork(trigger: .startup)
+
     //ToDo: check if non mac stuff works
     #elseif os(iOS) || os(tvOS)
         model.statusLights = DisKeyModel.lunarModule0
-        //model.network = Network("192.168.1.232", 19697)                 // .. Ubuntu
-        model.network = Network("192.168.1.100", 19697)                 // .. MaxBook
-        //model.network = Network("192.168.1.192", 19697)                 // .. iPhone
-        //model.network = Network("192.168.1.228", 19697)                 // .. iPadM4
-        //model.network = Network("127.0.0.1",     19697)                 // .. localhost
-        model.network.start()
+        model.ipPort = 19697
+        model.ipAddr = "192.168.1.100"                  // .. MaxBook
+        // model.ipAddr = "192.168.1.232"               // .. Ubuntu
+        // model.ipAddr = "192.168.1.192"               // .. iPhone
+        // model.ipAddr = "192.168.1.228"               // .. iPadM4
+        // model.ipAddr = "127.0.0.1"                   // .. localhost
+
+        startNetwork(trigger: .startup)
         updateELPowerFromNetwork(reason: "iOS/tvOS startup")
-        model.network.startDSKYReceiveLoop()
     #endif
+
 }
 
 func startNetworkForMonitorButton() {
@@ -269,6 +273,15 @@ func startNetworkForDSKYKeyPress() {
 // Starts network connection if ipAddr, ipPort & mission are set.
 // Also applies the selected mission configuration to the model
 private func startNetwork(trigger: NetworkConnectTrigger) {
+    //Apply mission to model
+    if trigger == .startup {
+        switch model.mission {
+            case .cm8_17: model.cmLamps()
+            case .lm11_14: model.lm0Lamps()
+            case .lm15_17: model.lm1Lamps()
+        }
+    }
+
     if hasConnectData() {
         logger.log("""
             →→→ startNetwork via \(trigger.reason): \
@@ -282,6 +295,7 @@ private func startNetwork(trigger: NetworkConnectTrigger) {
         if trigger == .monitorButton {
             model.network.sendDSKY032ReadyFromMonitor()
         }
+
     }
 
     model.network.startDSKYReceiveLoop()
@@ -292,13 +306,8 @@ private func startNetwork(trigger: NetworkConnectTrigger) {
 private func hasConnectData() -> Bool {
     let hasAddress = !model.ipAddr.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
     let hasPort = model.ipPort > 0
-    let menuValue = UserDefaults.standard.string(forKey: "monitor.menuString")?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
-    let hasMission = !menuValue.isEmpty && menuValue != "Select Mission"
-    if hasMission {
-        applyMissionSelectionToModel(menuValue)
-    }
 
-    return hasAddress && hasPort && hasMission
+    return hasAddress && hasPort
 }
 #endif
 
@@ -311,22 +320,6 @@ private func updateELPowerFromNetwork(reason: String) {
     }
 }
 
-@discardableResult
-private func applyMissionSelectionToModel(_ selection: String) -> Bool {
-    switch selection {
-        case "Apollo CM 8-17":
-            model.cmLamps()
-            return true
-        case "Apollo LM 11-14":
-            model.lm0Lamps()
-            return true
-        case "Apollo LM 15-17":
-            model.lm1Lamps()
-            return true
-        default:
-            return false
-    }
-}
 
 #if os(macOS)
 private extension DisKeyApp {
@@ -345,6 +338,7 @@ struct SettingsMenuContent: View {
     @Binding var audioRelayClicksMuted: Bool
     @Binding var audioButtonPressMuted: Bool
     @Binding var alwaysOnTop: Bool
+    @AppStorage("mission") private var mission: Mission = .cm8_17
 
     var body: some View {
         Button(model.audioMutedAll ? "🔇 Unmute Audio" : "🔊 Mute Audio") {
@@ -362,16 +356,6 @@ struct SettingsMenuContent: View {
             get: { !model.audioRelayClicksMuted },
             set: { model.audioRelayClicksMuted = !$0; audioRelayClicksMuted = !$0 }
         )) .disabled(model.audioMutedAll)
-
-        /* Button(model.audioButtonPressMuted ? "🔇 Button Press" : "🔊 Button Press") {
-            model.audioButtonPressMuted.toggle()
-            audioButtonPressMuted = model.audioButtonPressMuted
-        } .disabled(model.audioMutedAll)
-
-        Button(model.audioRelayClicksMuted ? "🔇 Relay Clicks" : "🔊 Relay Clicks") {
-            model.audioRelayClicksMuted.toggle()
-            audioRelayClicksMuted = model.audioRelayClicksMuted
-        } .disabled(model.audioMutedAll) */
 
         Text("Relay Sync Delay: \(model.audioSyncTimeS * 1000, specifier: "%.0f")ms")
 
@@ -392,6 +376,7 @@ struct SettingsMenuContent: View {
         Divider()
 
         Text("\(model.ipAddr) : \(String(model.ipPort))")
+
         Button(model.isNetworkConnected ? "Disconnect" : "Connect") {
              if model.isNetworkConnected {
                 logger.log("Disconnecting from network at \(model.ipAddr, privacy: .public):\(model.ipPort, privacy: .public)")
@@ -402,10 +387,26 @@ struct SettingsMenuContent: View {
              }
         }
 
+        //FixMe: submenu keeps flickering in 2-5sec interval.
+        // Mission
+        Menu("Mission: \(mission.rawValue)") {
+            ForEach(Mission.allCases, id: \.self) { option in
+                Button(option == mission ? "✔︎ \(option.rawValue)" : option.rawValue) {
+                    setMission(option)
+                }
+            }
+        }
+
 
         Divider()
 
         Toggle("Always on Top", isOn: $alwaysOnTop)
         .keyboardShortcut("p", modifiers: [.command])
     }
+
+    private func setMission(_ newMission: Mission) {
+        mission = newMission
+        model.mission = newMission
+    }
+
 }
