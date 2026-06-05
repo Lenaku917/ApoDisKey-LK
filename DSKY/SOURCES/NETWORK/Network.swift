@@ -36,7 +36,7 @@ final class Network: @unchecked Sendable {
     var connection = ConnectionStatus()
 
     private let host: String
-    private let port: UInt16
+    private let port: Int
     private var socketFD: Int32 = -1
     private let connectLock = NSLock()
     private var receiveTask: Task<Void, Never>?
@@ -57,11 +57,11 @@ final class Network: @unchecked Sendable {
         setConnectionState(.none)
     }
 
-    convenience init(_ host: String, _ port: UInt16) {
+    convenience init(_ host: String, _ port: Int) {
         self.init(host, port, connect: false)
     }
 
-    init(_ host: String, _ port: UInt16, connect: Bool = false) {
+    init(_ host: String, _ port: Int, connect: Bool = false) {
         self.host = host.trimmingCharacters(in: .whitespacesAndNewlines)
         self.port = port
         setConnectionState(.setup)

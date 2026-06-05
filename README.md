@@ -43,7 +43,7 @@ I've only tested this on macOS 15 (Sequoia) with localhost yaAGC.
 - Enabled copy/paste of `ip : port` field
 
 ### Future Plans
-- [ ] Fix the `Select Mission` submenu flickering issue
+- [x] Fix the `Select Mission` submenu flickering issue
 - [ ] Add button-press animations
 - [ ] Test on iPadOS
 - [ ] Port to web (using WebAssembly)

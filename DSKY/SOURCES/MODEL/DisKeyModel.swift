@@ -92,7 +92,7 @@ enum Mission: String, CaseIterable {
   ┆ .. network information for connecting to AGC (default values) ..                                 ┆
   ╰╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╯*/
     public var ipAddr: String = "localhost"
-    public var ipPort: UInt16 = 19697
+    public var ipPort: Int = 19697
     public var network = Network()                  	// initializes but doesn't start
     public var mission: Mission = .cm8_17 {
         didSet {

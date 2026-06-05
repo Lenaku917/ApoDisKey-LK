@@ -18,10 +18,13 @@ struct DisKeyApp: App {
     @AppStorage("audioSyncTimeS") private var audioSyncTimeS = 0.006
     @AppStorage("audioRelayClicksMuted") private var audioRelayClicksMuted = false
     @AppStorage("audioButtonPressMuted") private var audioButtonPressMuted = false
+    @AppStorage("alwaysOnTop") private var alwaysOnTop = true
+    @AppStorage("mission") private var mission: Mission = .cm8_17
+    @AppStorage("ipAddr") private var ipAddr: String = "localhost"
+    @AppStorage("ipPort") private var ipPort: Int = 19697
 
     #if os(macOS)
         @NSApplicationDelegateAdaptor(AppDelegate.self) var appDelegate
-        @AppStorage("alwaysOnTop") private var alwaysOnTop = true
 
         class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
             func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool { true }
@@ -47,7 +50,7 @@ struct DisKeyApp: App {
             extractOptions()                        // get any command arguments ..
         #endif
 
-        applyStoredAudioSettingsToModel()
+        applyStoredSettingsToModel()
         startNetworkOnStartup()
     }
 
@@ -56,7 +59,7 @@ struct DisKeyApp: App {
   ╰╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╯*/
     var body: some Scene {
         WindowGroup {
-            AppView(audioMutedAll: $audioMutedAll, audioSyncTimeS: $audioSyncTimeS, audioRelayClicksMuted: $audioRelayClicksMuted, audioButtonPressMuted: $audioButtonPressMuted, alwaysOnTop: $alwaysOnTop)
+            AppView(audioMutedAll: $audioMutedAll, audioSyncTimeS: $audioSyncTimeS, audioRelayClicksMuted: $audioRelayClicksMuted, audioButtonPressMuted: $audioButtonPressMuted, alwaysOnTop: $alwaysOnTop, mission: $mission, ipAddr: $ipAddr, ipPort: $ipPort)
         }
         .defaultSize(CGSize(width: model.windowW, height: model.windowH))
         #if os(macOS)
@@ -73,7 +76,7 @@ struct DisKeyApp: App {
             CommandGroup(replacing: .windowSize) { }
             CommandGroup(replacing: .windowArrangement) { }
             CommandMenu("Settings") {
-                SettingsMenuContent(audioMutedAll: $audioMutedAll, audioSyncTimeS: $audioSyncTimeS, audioRelayClicksMuted: $audioRelayClicksMuted, audioButtonPressMuted: $audioButtonPressMuted, alwaysOnTop: $alwaysOnTop)
+                SettingsMenuContent(audioMutedAll: $audioMutedAll, audioSyncTimeS: $audioSyncTimeS, audioRelayClicksMuted: $audioRelayClicksMuted, audioButtonPressMuted: $audioButtonPressMuted, alwaysOnTop: $alwaysOnTop, mission: $mission, ipAddr: $ipAddr, ipPort: $ipPort)
             }
             #if os(macOS)
                 CommandGroup(replacing: .help) {
@@ -115,6 +118,9 @@ struct AppView: View {
     @Binding var audioRelayClicksMuted: Bool
     @Binding var audioButtonPressMuted: Bool
     @Binding var alwaysOnTop: Bool
+    @Binding var mission: Mission
+    @Binding var ipAddr: String
+    @Binding var ipPort: Int
 
     var body: some View {
         let scaleFactor = model.fullSize ? 1 : 0.5
@@ -124,14 +130,14 @@ struct AppView: View {
                 .scaleEffect(scaleFactor)
                 #if os(macOS)
                     .contextMenu {
-                        SettingsMenuContent(audioMutedAll: $audioMutedAll, audioSyncTimeS: $audioSyncTimeS, audioRelayClicksMuted: $audioRelayClicksMuted, audioButtonPressMuted: $audioButtonPressMuted, alwaysOnTop: $alwaysOnTop)
+                        SettingsMenuContent(audioMutedAll: $audioMutedAll, audioSyncTimeS: $audioSyncTimeS, audioRelayClicksMuted: $audioRelayClicksMuted, audioButtonPressMuted: $audioButtonPressMuted, alwaysOnTop: $alwaysOnTop, mission: $mission, ipAddr: $ipAddr, ipPort: $ipPort)
                     }
                 #endif
             #if os(macOS)
             //ToDo: what if half size no mission/network?
                 if model.fullSize && !model.isNetworkConnected {
                     Divider()
-                    MonitorView()
+                    MonitorView(mission: $mission, ipAddr: $ipAddr, ipPort: $ipPort)
                 }
             #endif
         }
@@ -143,17 +149,19 @@ struct AppView: View {
     }
 }
 
-#Preview("AppView") { AppView(audioMutedAll: .constant(false), audioSyncTimeS: .constant(0.006), audioRelayClicksMuted: .constant(false), audioButtonPressMuted: .constant(false), alwaysOnTop: .constant(true)) }
+#Preview("AppView") { AppView(audioMutedAll: .constant(false), audioSyncTimeS: .constant(0.006), audioRelayClicksMuted: .constant(false), audioButtonPressMuted: .constant(false), alwaysOnTop: .constant(true), mission: .constant(.cm8_17), ipAddr: .constant("localhost"), ipPort: .constant(19697)) }
 
 struct MonitorView: View {
 
-    @AppStorage("monitor.ipAddr") private var ipAddr: String = "localhost"
-    @AppStorage("monitor.ipPort") private var ipPort: Int = 19697
-    @AppStorage("mission") private var mission: Mission = .cm8_17
+    @AppStorage("monitor.ipAddr") private var mIpAddr: String = model.ipAddr
+    @AppStorage("monitor.ipPort") private var mIpPort: Int = model.ipPort
+    @Binding var mission: Mission
+    @Binding var ipAddr: String
+    @Binding var ipPort: Int
 
-    private var resolvedPort: UInt16? {
-        guard let port = UInt16(exactly: ipPort), port > 0 else { return nil }
-        return port
+    private var resolvedPort: Int? {
+        guard mIpPort > 0 else { return nil }
+        return mIpPort
     }
 
     static var integer: NumberFormatter = {
@@ -165,23 +173,12 @@ struct MonitorView: View {
 
     var body: some View {
         HStack {
-            //FixMe: use menu from other one.
-             Menu(mission.rawValue) {
-                Button("CM 8-17",
-                  action: { setMission(.cm8_17) }
-                )
-                Button("LM 11-14",
-                  action: { setMission(.lm11_14) }
-                )
-                Button("LM 15-17",
-                  action: { setMission(.lm15_17) }
-                )
-            }
+            MissionMenu(mission: $mission)
 
-            TextField("AGC Address", text: $ipAddr)
+            TextField("AGC Address", text: $mIpAddr)
                 .font(.custom("Menlo", size: 12))
 
-            TextField("AGC PortNum", value: $ipPort, formatter: MonitorView.integer)
+            TextField("AGC PortNum", value: $mIpPort, formatter: MonitorView.integer)
                 .font(.custom("Menlo", size: 12))
 
 /*╭╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╮
@@ -191,29 +188,30 @@ struct MonitorView: View {
                 systemImage: "phone.connection",
                 action: {
                     guard let port = resolvedPort else { return }
+                    ipAddr = mIpAddr
+                    ipPort = mIpPort
                     model.ipAddr = ipAddr
                     model.ipPort = port
                     startNetworkForMonitorButton()
                 }
             )
-            .disabled(ipAddr.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || resolvedPort == nil)
+            .disabled(mIpAddr.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || resolvedPort == nil)
         }
         .padding(5)
         .background(.gray)
-        .onAppear {
-            setMission(mission)
-        }
+        /* .onAppear {
+            setMission(model.mission)
+        } */
     }
 
-    private func setMission(_ newMission: Mission) {
-        mission = newMission
+    /* private func setMission(_ newMission: Mission) {
         model.mission = newMission
-    }
+    } */
 
 }
 
 #if swift(>=5.9)
-#Preview("Monitor") { MonitorView() }
+#Preview("Monitor") { MonitorView(mission: .constant(.cm8_17), ipAddr: .constant("localhost"), ipPort: .constant(19697)) }
 #endif
 
 #if os(macOS)
@@ -243,6 +241,7 @@ private enum NetworkConnectTrigger {
 }
 
 func startNetworkOnStartup() {
+
     #if os(macOS)
         startNetwork(trigger: .startup)
 
@@ -273,6 +272,8 @@ func startNetworkForDSKYKeyPress() {
 // Starts network connection if ipAddr, ipPort & mission are set.
 // Also applies the selected mission configuration to the model
 private func startNetwork(trigger: NetworkConnectTrigger) {
+
+
     //Apply mission to model
     if trigger == .startup {
         switch model.mission {
@@ -301,6 +302,10 @@ private func startNetwork(trigger: NetworkConnectTrigger) {
     model.network.startDSKYReceiveLoop()
 }
 
+private func isConnected() -> Bool {
+    return model.isNetworkConnected
+}
+
 // Checks if ipAddr, ipPort & mission selection are valid and present
 // Aplies the selected mission configuration to the model
 private func hasConnectData() -> Bool {
@@ -323,14 +328,33 @@ private func updateELPowerFromNetwork(reason: String) {
 
 #if os(macOS)
 private extension DisKeyApp {
-    func applyStoredAudioSettingsToModel() {
+    func applyStoredSettingsToModel() {
         model.audioMutedAll = audioMutedAll
         model.audioSyncTimeS = audioSyncTimeS
         model.audioRelayClicksMuted = audioRelayClicksMuted
         model.audioButtonPressMuted = audioButtonPressMuted
+        model.mission = mission
+        model.ipAddr = ipAddr
+        model.ipPort = ipPort
     }
 }
 #endif
+
+struct MissionMenu: View {
+    @Binding var mission: Mission
+
+    var body: some View {
+        Menu("Mission: \(mission.rawValue)") {
+            ForEach(Mission.allCases, id: \.self) { option in
+                Button(option == mission ? "✔︎ \(option.rawValue)" : option.rawValue) {
+                    model.mission = option
+                    mission = option
+                }
+            }
+        }
+    }
+}
+
 
 struct SettingsMenuContent: View {
     @Binding var audioMutedAll: Bool
@@ -338,48 +362,63 @@ struct SettingsMenuContent: View {
     @Binding var audioRelayClicksMuted: Bool
     @Binding var audioButtonPressMuted: Bool
     @Binding var alwaysOnTop: Bool
-    @AppStorage("mission") private var mission: Mission = .cm8_17
+    @Binding var mission: Mission
+    @Binding var ipAddr: String
+    @Binding var ipPort: Int
 
     var body: some View {
-        Button(model.audioMutedAll ? "🔇 Unmute Audio" : "🔊 Mute Audio") {
+        Button(audioMutedAll ? "🔇 Unmute Audio" : "🔊 Mute Audio") {
             model.audioMutedAll.toggle()
             audioMutedAll = model.audioMutedAll
         }
         .keyboardShortcut("m", modifiers: [.command])
 
         Toggle("Button Press", isOn: Binding(
-            get: { !model.audioButtonPressMuted },
+            get: { !audioButtonPressMuted },
             set: { model.audioButtonPressMuted = !$0; audioButtonPressMuted = !$0 }
         )) .disabled(model.audioMutedAll)
 
         Toggle("Relay Clicks", isOn: Binding(
-            get: { !model.audioRelayClicksMuted },
+            get: { !audioRelayClicksMuted },
             set: { model.audioRelayClicksMuted = !$0; audioRelayClicksMuted = !$0 }
         )) .disabled(model.audioMutedAll)
 
-        Text("Relay Sync Delay: \(model.audioSyncTimeS * 1000, specifier: "%.0f")ms")
+        Text("Relay Sync Delay: \(audioSyncTimeS * 1000, specifier: "%.0f")ms")
 
         Button(" +  Increase") {
-            let next = min(0.02, model.audioSyncTimeS + 0.001)
+            let next = min(0.1, audioSyncTimeS + 0.001)
             model.audioSyncTimeS = next
             audioSyncTimeS = next
-        } .disabled(model.audioMutedAll || model.audioSyncTimeS >= 0.02)
+        } .disabled(audioMutedAll || audioSyncTimeS >= 0.1)
         .keyboardShortcut("+", modifiers: [.command])
 
         Button(" -  Decrease") {
-            let next = max(0.001, model.audioSyncTimeS - 0.001)
+            let next = max(0.001, audioSyncTimeS - 0.001)
+            model.audioSyncTimeS = next
+            audioSyncTimeS = next
+        } .disabled(audioMutedAll || audioSyncTimeS <= 0.001)
+        .keyboardShortcut("-", modifiers: [.command])
+
+        Button(" +  Increase (x10)") {
+            let next = min(0.1, model.audioSyncTimeS + 0.01)
+            model.audioSyncTimeS = next
+            audioSyncTimeS = next
+        } .disabled(model.audioMutedAll || model.audioSyncTimeS >= 0.1)
+        .keyboardShortcut("+", modifiers: [.shift, .command])
+
+        Button(" -  Decrease (x10)") {
+            let next = max(0.001, model.audioSyncTimeS - 0.01)
             model.audioSyncTimeS = next
             audioSyncTimeS = next
         } .disabled(model.audioMutedAll || model.audioSyncTimeS <= 0.001)
-        .keyboardShortcut("-", modifiers: [.command])
+        .keyboardShortcut("-", modifiers: [.shift, .command])
 
         Divider()
 
-        Text("\(model.ipAddr) : \(String(model.ipPort))")
+        Text("\(ipAddr) : \(String(ipPort))")
 
-        Button(model.isNetworkConnected ? "Disconnect" : "Connect") {
-             if model.isNetworkConnected {
-                logger.log("Disconnecting from network at \(model.ipAddr, privacy: .public):\(model.ipPort, privacy: .public)")
+        Button("Dis-/Connect") { // Can't use isConnected()? bc it will make the mission menu flicker...
+             if isConnected() {
                 model.network.stop()
                 updateELPowerFromNetwork(reason: "Settings Disconnect")
              } else {
@@ -387,26 +426,13 @@ struct SettingsMenuContent: View {
              }
         }
 
-        //FixMe: submenu keeps flickering in 2-5sec interval.
         // Mission
-        Menu("Mission: \(mission.rawValue)") {
-            ForEach(Mission.allCases, id: \.self) { option in
-                Button(option == mission ? "✔︎ \(option.rawValue)" : option.rawValue) {
-                    setMission(option)
-                }
-            }
-        }
-
+        MissionMenu(mission: $mission)
 
         Divider()
 
         Toggle("Always on Top", isOn: $alwaysOnTop)
         .keyboardShortcut("p", modifiers: [.command])
-    }
-
-    private func setMission(_ newMission: Mission) {
-        mission = newMission
-        model.mission = newMission
     }
 
 }

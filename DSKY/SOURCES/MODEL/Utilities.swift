@@ -220,11 +220,11 @@ func extractOptions() {
         if arg.hasPrefix("--cfg=") {
             arg.removeFirst(6)
             if arg.starts(with: "CM") {
-                UserDefaults.standard.set("Apollo CM 8-17", forKey: "monitor.menuString")
+                model.mission = .cm8_17
             } else if arg.starts(with: "LM1") {
-                UserDefaults.standard.set("Apollo LM 15-17", forKey: "monitor.menuString")
+                model.mission = .lm15_17
             } else if arg.starts(with: "LM") {
-                UserDefaults.standard.set("Apollo LM 11-14", forKey: "monitor.menuString")
+                model.mission = .lm11_14
             }
 
         } else if arg.hasPrefix("--ip=") {
@@ -232,7 +232,7 @@ func extractOptions() {
             model.ipAddr = arg
         } else if arg.hasPrefix("--port=") {
             arg.removeFirst(7)
-            model.ipPort = UInt16(arg)!
+            model.ipPort = Int(arg)!
 
         } else if arg.hasPrefix("--half-size") {
             model.fullSize = false
